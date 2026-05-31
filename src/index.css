@@ -1,0 +1,86 @@
+@import "reactflow/dist/style.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #0d1117;
+  color: #e6edf3;
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Thin custom scrollbars to match the dev-tool aesthetic */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 6px;
+  border: 2px solid #0d1117;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* React Flow dark overrides */
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__edge-path {
+  stroke: #484f58;
+  stroke-width: 1.5;
+}
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus .react-flow__edge-path {
+  stroke: #58a6ff;
+}
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background: #58a6ff;
+  border: 2px solid #161b22;
+}
+.react-flow__controls {
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: none;
+}
+.react-flow__controls-button {
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  color: #e6edf3;
+  fill: #e6edf3;
+}
+.react-flow__controls-button:hover {
+  background: #1c2128;
+}
+.react-flow__minimap {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+
+@layer utilities {
+  .mono {
+    font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  }
+}
