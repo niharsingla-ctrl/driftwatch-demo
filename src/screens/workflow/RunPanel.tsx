@@ -39,10 +39,12 @@ export function RunPanel({
   mode,
   setMode,
   onClose,
+  onRun,
 }: {
   mode: "single" | "load";
   setMode: (m: "single" | "load") => void;
   onClose: () => void;
+  onRun: () => void;
 }) {
   return (
     <div className="absolute right-3 top-3 z-10 w-72 rounded-lg border border-border bg-surface shadow-xl">
@@ -118,7 +120,7 @@ export function RunPanel({
           </Field>
         </div>
 
-        <Button className="w-full" size="lg">
+        <Button className="w-full" size="lg" onClick={onRun}>
           <Play className="h-4 w-4" /> Run Flow
         </Button>
       </div>

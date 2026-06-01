@@ -1,7 +1,8 @@
 import {
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
   Line,
+  Area,
   BarChart,
   Bar,
   XAxis,
@@ -32,45 +33,92 @@ const tooltipStyle = {
 };
 
 export function CorrectnessChart() {
+  // `gap` fills the red region only where correctness sits below the 99% target.
+  const data = correctnessOverTime.map((d) => ({
+    ...d,
+    gap: Math.min(d.correct, 99),
+  }));
   return (
     <Card>
       <CardHeader>
         <CardTitle>Correctness % over time</CardTitle>
-        <span className="text-2xs text-muted">drops at ~60 concurrent</span>
+        <span className="text-2xs text-muted">
+          drops as concurrency peaks (0:34→1:07)
+        </span>
       </CardHeader>
       <CardContent className="h-44 p-2">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={correctnessOverTime}
-            margin={{ top: 8, right: 12, left: -18, bottom: 0 }}
+          <ComposedChart
+            data={data}
+            margin={{ top: 10, right: 14, left: -18, bottom: 0 }}
           >
+            <defs>
+              <linearGradient id="belowTarget" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f85149" stopOpacity={0.28} />
+                <stop offset="100%" stopColor="#f85149" stopOpacity={0.04} />
+              </linearGradient>
+            </defs>
             <CartesianGrid stroke="#21262d" vertical={false} />
-            <XAxis dataKey="t" tick={axisStyle} tickLine={false} axisLine={{ stroke: "#30363d" }} />
+            <XAxis
+              dataKey="t"
+              tick={{ ...axisStyle, fontSize: 9 }}
+              tickLine={false}
+              axisLine={{ stroke: "#30363d" }}
+              interval={0}
+              minTickGap={0}
+            />
             <YAxis
               domain={[85, 100]}
+              ticks={[85, 90, 95, 100]}
+              tickFormatter={(v) => `${v}%`}
               tick={axisStyle}
               tickLine={false}
               axisLine={false}
-              width={36}
+              width={40}
             />
-            <Tooltip {...tooltipStyle} cursor={{ stroke: "#30363d" }} />
+            <Tooltip
+              {...tooltipStyle}
+              cursor={{ stroke: "#30363d" }}
+              formatter={(value: number, name) =>
+                name === "Correct %" ? [`${value}%`, name] : [value, name]
+              }
+            />
+            {/* red shading between the line and the 99% target, only below target */}
+            <Area
+              type="monotone"
+              dataKey="gap"
+              baseValue={99}
+              stroke="none"
+              fill="url(#belowTarget)"
+              isAnimationActive={false}
+              activeDot={false}
+              legendType="none"
+              name="below target"
+            />
             <ReferenceLine
               y={99}
               stroke="#d29922"
-              strokeDasharray="4 3"
-              strokeWidth={1}
-              label={{ value: "target 99%", fill: "#d29922", fontSize: 9, position: "insideTopRight" }}
+              strokeDasharray="5 3"
+              strokeWidth={1.5}
+              label={{
+                value: "target 99%",
+                fill: "#d29922",
+                fontSize: 9,
+                fontWeight: 600,
+                position: "insideTopRight",
+              }}
             />
             <Line
               type="monotone"
               dataKey="correct"
               name="Correct %"
               stroke="#3fb950"
-              strokeWidth={2}
-              dot={{ r: 2, fill: "#3fb950" }}
+              strokeWidth={2.25}
+              dot={{ r: 2, fill: "#3fb950", strokeWidth: 0 }}
               activeDot={{ r: 4 }}
+              isAnimationActive={false}
             />
-          </LineChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

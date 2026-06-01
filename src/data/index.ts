@@ -19,6 +19,7 @@ export const healthStats = {
 
 export const recentRuns: RecentRun[] = [
   {
+    id: "run-smoke",
     name: "Smoke Suite — staging",
     status: "pass",
     correctPercent: 100,
@@ -27,6 +28,7 @@ export const recentRuns: RecentRun[] = [
     time: "4m ago",
   },
   {
+    id: "run-create-order",
     name: "Create Order Flow × 200u",
     status: "fail",
     correctPercent: 94.1,
@@ -35,6 +37,7 @@ export const recentRuns: RecentRun[] = [
     time: "1h ago",
   },
   {
+    id: "run-full-regression",
     name: "Full Regression — main",
     status: "pass",
     correctPercent: 99.8,
@@ -43,6 +46,7 @@ export const recentRuns: RecentRun[] = [
     time: "3h ago",
   },
   {
+    id: "run-auth",
     name: "Auth Flow × 50 users",
     status: "pass",
     correctPercent: 99.9,
@@ -198,19 +202,21 @@ export const sampleFailures: SampleFailure[] = [
 
 export const loadAiAnalysis = `These failures cluster between 60–200 concurrent users and affect the items array specifically. Pattern is consistent with a race condition in cart item insertion — likely a missing database transaction or optimistic lock conflict in OrderService.create(). Failures spike at second 34–67 of the run (peak concurrency window).`;
 
-// Correctness % over time (drops at ~60 concurrent users)
+// Correctness % over time.
+// Flat near 99.8% through ramp-up (→0:34), sharp drop as concurrency peaks
+// (0:34→1:07), flat ~94.1% under sustained max load, slight recovery at 3:00.
 export const correctnessOverTime = [
-  { t: "0:00", users: 0, correct: 100 },
-  { t: "0:15", users: 50, correct: 99.9 },
-  { t: "0:30", users: 110, correct: 98.4 },
-  { t: "0:34", users: 130, correct: 95.1 },
-  { t: "0:45", users: 170, correct: 91.2 },
-  { t: "0:60", users: 200, correct: 89.7 },
-  { t: "1:07", users: 200, correct: 88.9 },
-  { t: "1:30", users: 200, correct: 91.5 },
-  { t: "2:00", users: 200, correct: 93.8 },
-  { t: "2:30", users: 200, correct: 95.2 },
-  { t: "3:00", users: 200, correct: 96.1 },
+  { t: "0:00", users: 0, correct: 99.9 },
+  { t: "0:15", users: 90, correct: 99.8 },
+  { t: "0:34", users: 200, correct: 99.8 },
+  { t: "0:45", users: 200, correct: 97.6 },
+  { t: "0:55", users: 200, correct: 95.4 },
+  { t: "1:07", users: 200, correct: 94.1 },
+  { t: "1:30", users: 200, correct: 94.0 },
+  { t: "2:00", users: 200, correct: 94.1 },
+  { t: "2:30", users: 200, correct: 94.2 },
+  { t: "2:45", users: 200, correct: 94.6 },
+  { t: "3:00", users: 200, correct: 95.0 },
 ];
 
 // Response time distribution (long tail above 200u)
@@ -380,6 +386,81 @@ export const orderImpact = {
     "OpenAPI spec: /orders POST response schema",
     "1 other endpoint: GET /orders/{id} (same issue)",
   ],
+};
+
+/** Compact diff detail for endpoints other than POST /orders. */
+export interface CompareDetail {
+  changes: {
+    severity: "breaking" | "safe" | "warning";
+    field: string;
+    detail: string;
+    note: string;
+  }[];
+  before: string;
+  after: string;
+  impact: string[];
+}
+
+export const compareDetails: Record<string, CompareDetail> = {
+  "GET /users/{id}": {
+    changes: [
+      {
+        severity: "breaking",
+        field: "body.phone",
+        detail: "now required (was optional)",
+        note: "Requests/consumers omitting phone will receive 422",
+      },
+    ],
+    before: '{\n  "id": 5,\n  "name": "Ada",\n  "phone": null\n}',
+    after: '{\n  "id": 5,\n  "name": "Ada",\n  "phone": "+1-555-0100"  // required\n}',
+    impact: [
+      "3 test assertions in \"User Profile\" suite",
+      "OpenAPI spec: /users/{id} response schema",
+    ],
+  },
+  "GET /orders/{id}": {
+    changes: [
+      {
+        severity: "safe",
+        field: "body.estimated_delivery",
+        detail: "new optional field added",
+        note: "Additive — existing consumers unaffected",
+      },
+    ],
+    before: '{\n  "id": 1,\n  "status": "shipped"\n}',
+    after:
+      '{\n  "id": 1,\n  "status": "shipped",\n  "estimated_delivery": "2026-06-03"\n}',
+    impact: ["Surfaced in \"Order Tracking\" workflow (optional read)"],
+  },
+  "GET /products": {
+    changes: [
+      {
+        severity: "warning",
+        field: "p95 latency",
+        detail: "89ms → 134ms (+50%)",
+        note: "No schema change — response shape identical",
+      },
+    ],
+    before: "p50: 41ms\np95: 89ms\np99: 142ms",
+    after: "p50: 58ms\np95: 134ms   // +50%\np99: 233ms",
+    impact: [
+      "Within SLA (200ms) but trending up",
+      "Likely N+1 query introduced in product listing",
+    ],
+  },
+  "GET /users": {
+    changes: [
+      {
+        severity: "warning",
+        field: "pagination.default_page_size",
+        detail: "20 → 25",
+        note: "Clients hard-coding 20 will see different page boundaries",
+      },
+    ],
+    before: '{\n  "page": 1,\n  "page_size": 20,\n  "items": [ /* 20 */ ]\n}',
+    after: '{\n  "page": 1,\n  "page_size": 25,\n  "items": [ /* 25 */ ]\n}',
+    impact: ["2 snapshot assertions expecting 20 items will fail"],
+  },
 };
 
 export const prComment = {

@@ -6,6 +6,12 @@ export interface FlowNodeData {
   kind: keyof typeof NODE_KINDS;
   title?: string;
   lines?: string[];
+  // editable API-request fields (used by the properties panel)
+  method?: string;
+  url?: string;
+  body?: string;
+  assertions?: string[];
+  onFailure?: string;
 }
 
 /** Terminal Start/End nodes render as a compact pill. */

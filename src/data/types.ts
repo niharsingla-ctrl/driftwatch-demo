@@ -1,6 +1,7 @@
 export type RunStatus = "running" | "passed" | "failed" | "cancelled";
 
 export interface RecentRun {
+  id: string;
   name: string;
   status: "pass" | "fail" | "running";
   correctPercent: number | null;

@@ -6,17 +6,18 @@ import {
   Server,
   ArrowRight,
   Sparkles,
+  RotateCw,
+  Pencil,
+  Wrench,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/StatusPill";
 import { AiCallout } from "@/components/AiCallout";
-import {
-  loadRunMeta,
-  stepResults,
-  sampleFailures,
-  loadAiAnalysis,
-} from "@/data";
+import { RunOverlay } from "@/components/RunOverlay";
+import { useStore } from "@/store/AppStore";
+import { sampleFailures, loadAiAnalysis } from "@/data";
+import type { StepResult } from "@/data/types";
 import {
   CorrectnessChart,
   ResponseTimeChart,
@@ -25,21 +26,41 @@ import {
 import { cn } from "@/lib/utils";
 
 export function LoadResults() {
+  const { loadRun, setLoadRun, setLoadTarget, navigate, addNode } = useStore();
+  const stepResults = loadRun.steps;
   const [expanded, setExpanded] = useState<string | null>("create_order");
+  const [fixOpen, setFixOpen] = useState(false);
+  const [editingTarget, setEditingTarget] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
+
+  const passed = loadRun.overallCorrectness >= loadRun.targetCorrectness;
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5">
       {/* Top metadata bar */}
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
         <h1 className="mono text-base font-semibold text-text-primary">
-          {loadRunMeta.name}
+          {loadRun.name}
         </h1>
-        <Meta Icon={Users} text={`${loadRunMeta.users} users`} />
-        <Meta Icon={Clock} text={loadRunMeta.duration} />
-        <Meta Icon={Server} text={loadRunMeta.environment} />
-        <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-danger/40 bg-danger/10 px-2.5 py-1 text-xs font-semibold text-danger">
-          <StatusPill kind="fail" iconOnly /> FAILED
-        </span>
+        <Meta Icon={Users} text={`${loadRun.users} users`} />
+        <Meta Icon={Clock} text={loadRun.duration} />
+        <Meta Icon={Server} text={loadRun.environment} />
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setRerunning(true)}>
+            <RotateCw className="h-3.5 w-3.5" /> Re-run
+          </Button>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold",
+              passed
+                ? "border-success/40 bg-success/10 text-success"
+                : "border-danger/40 bg-danger/10 text-danger"
+            )}
+          >
+            <StatusPill kind={passed ? "pass" : "fail"} iconOnly />
+            {passed ? "PASSED" : "FAILED"}
+          </span>
+        </div>
       </div>
 
       {/* Summary stat row */}
@@ -50,36 +71,98 @@ export function LoadResults() {
               Overall Correctness
             </p>
             <p className="mt-1 flex items-baseline gap-1.5">
-              <span className="mono text-2xl font-bold text-danger">
-                {loadRunMeta.overallCorrectness}%
+              <span
+                className={cn(
+                  "mono text-2xl font-bold",
+                  passed ? "text-success" : "text-danger"
+                )}
+              >
+                {loadRun.overallCorrectness}%
               </span>
-              <span className="text-2xs text-muted">
-                target: {loadRunMeta.targetCorrectness}%
-              </span>
+              {editingTarget ? (
+                <span className="flex items-center gap-1 text-2xs text-muted">
+                  target:
+                  <input
+                    autoFocus
+                    type="number"
+                    defaultValue={loadRun.targetCorrectness}
+                    onBlur={(e) => {
+                      setLoadTarget(Number(e.target.value) || 99);
+                      setEditingTarget(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setLoadTarget(
+                          Number((e.target as HTMLInputElement).value) || 99
+                        );
+                        setEditingTarget(false);
+                      }
+                    }}
+                    className="w-12 rounded border border-accent bg-bg px-1 mono text-2xs text-text-primary focus:outline-none"
+                  />
+                  %
+                </span>
+              ) : (
+                <button
+                  onClick={() => setEditingTarget(true)}
+                  className="group flex items-center gap-1 text-2xs text-muted hover:text-text-primary"
+                >
+                  target: {loadRun.targetCorrectness}%
+                  <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-60" />
+                </button>
+              )}
             </p>
             <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-bg">
               <div
-                className="h-full rounded-full bg-danger"
-                style={{ width: `${loadRunMeta.overallCorrectness}%` }}
+                className={cn(
+                  "h-full rounded-full",
+                  passed ? "bg-success" : "bg-danger"
+                )}
+                style={{ width: `${loadRun.overallCorrectness}%` }}
               />
             </div>
           </CardContent>
         </Card>
         <SummaryStat
           label="Total Requests"
-          value={loadRunMeta.totalRequests.toLocaleString()}
+          value={loadRun.totalRequests.toLocaleString()}
         />
         <SummaryStat
           label="Correct Responses"
-          value={loadRunMeta.correctResponses.toLocaleString()}
+          value={loadRun.correctResponses.toLocaleString()}
           tone="success"
         />
         <SummaryStat
           label="Failed Assertions"
-          value={loadRunMeta.failedAssertions.toLocaleString()}
+          value={loadRun.failedAssertions.toLocaleString()}
           tone="danger"
         />
       </div>
+
+      {rerunning && (
+        <RunOverlay
+          fixed
+          title={loadRun.name}
+          users={loadRun.users}
+          durationLabel={loadRun.duration}
+          environment={loadRun.environment}
+          ctaLabel="Apply results"
+          onClose={() => setRerunning(false)}
+          onViewResults={(final) => {
+            setLoadRun({
+              ...loadRun,
+              status: final.overallCorrectness < loadRun.targetCorrectness
+                ? "failed"
+                : "passed",
+              overallCorrectness: final.overallCorrectness,
+              totalRequests: final.totalRequests,
+              correctResponses: final.correctResponses,
+              failedAssertions: final.totalRequests - final.correctResponses,
+            });
+            setRerunning(false);
+          }}
+        />
+      )}
 
       {/* Per-step table */}
       <Card className="mb-4">
@@ -170,10 +253,86 @@ export function LoadResults() {
 
         <div className="flex flex-col gap-4">
           <AiCallout className="flex-1">{loadAiAnalysis}</AiCallout>
-          <Button variant="secondary" size="sm" className="self-start">
-            <Sparkles className="h-3.5 w-3.5 text-[#bc8cff]" />
-            Explain in workflow context
-          </Button>
+          <div className="relative flex items-center gap-2">
+            <Button variant="secondary" size="sm">
+              <Sparkles className="h-3.5 w-3.5 text-[#bc8cff]" />
+              Explain in workflow context
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="border-warning/40 text-warning hover:bg-warning/10"
+              onClick={() => setFixOpen((v) => !v)}
+            >
+              <Wrench className="h-3.5 w-3.5" /> Fix in Workflow
+            </Button>
+
+            {fixOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setFixOpen(false)}
+                />
+                <div className="absolute bottom-10 right-0 z-50 w-80 rounded-lg border border-border bg-surface p-3 shadow-2xl">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-[#bc8cff]" />
+                    <span className="text-xs font-semibold">AI Suggestion</span>
+                  </div>
+                  <div className="space-y-2 text-2xs leading-relaxed text-text-primary/90">
+                    <p>
+                      <span className="font-semibold text-danger">
+                        Root cause:
+                      </span>{" "}
+                      race condition in create_order step. Missing database
+                      transaction wrapping order + items.
+                    </p>
+                    <p>
+                      <span className="font-semibold text-accent">
+                        Suggested workflow change:
+                      </span>{" "}
+                      Add a <span className="mono">Wait/Delay</span> node (50ms)
+                      between the cart fetch and order creation to reduce the
+                      concurrency collision window.
+                    </p>
+                    <p className="text-muted">
+                      This is a workaround — the real fix is in your backend
+                      code. But this will confirm the race condition is the
+                      cause by reducing the failure rate.
+                    </p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        addNode("wait", { x: 285, y: 690 });
+                        setFixOpen(false);
+                        navigate("workflow");
+                      }}
+                    >
+                      Apply to Workflow
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setFixOpen(false);
+                        navigate("workflow");
+                      }}
+                    >
+                      Open Workflow
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFixOpen(false)}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -193,7 +352,7 @@ function FragmentRow({
   clickable,
   onToggle,
 }: {
-  step: (typeof stepResults)[number];
+  step: StepResult;
   open: boolean;
   clickable: boolean;
   onToggle: () => void;
