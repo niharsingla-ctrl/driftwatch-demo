@@ -35,7 +35,7 @@ branch") testing, and OpenAPI contract drift detection.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/driftwatch-demo.git
+git clone https://github.com/niharsingla-ctrl/driftwatch-demo.git
 cd driftwatch-demo
 
 # 2. Install dependencies
