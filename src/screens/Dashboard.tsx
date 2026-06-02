@@ -22,8 +22,16 @@ import { useSimulation } from "@/hooks/useSimulation";
 import { cn } from "@/lib/utils";
 
 export function Dashboard() {
-  const { runs, navigate, addRun, deleteRun, renameRun, updateRun, env, search } =
-    useStore();
+  const {
+    runs,
+    navigate,
+    addRun,
+    deleteRun,
+    renameRun,
+    updateRun,
+    env,
+    search,
+  } = useStore();
   const [expandedContract, setExpandedContract] = useState<string | null>(null);
 
   const sim = useSimulation();
@@ -63,19 +71,17 @@ export function Dashboard() {
         ? runs.filter(
             (r) =>
               r.name.toLowerCase().includes(q) ||
-              r.triggeredBy.toLowerCase().includes(q)
+              r.triggeredBy.toLowerCase().includes(q),
           )
         : runs,
-    [runs, q]
+    [runs, q],
   );
   const filteredContracts = useMemo(
     () =>
       q
-        ? contractHealth.filter((c) =>
-            c.endpoint.toLowerCase().includes(q)
-          )
+        ? contractHealth.filter((c) => c.endpoint.toLowerCase().includes(q))
         : contractHealth,
-    [q]
+    [q],
   );
 
   return (
@@ -133,7 +139,11 @@ export function Dashboard() {
         />
         <StatCard
           label="Last Run"
-          value={runs[0]?.time === "just now" ? "just now — 134/134" : healthStats.lastRun}
+          value={
+            runs[0]?.time === "just now"
+              ? "just now — 134/134"
+              : healthStats.lastRun
+          }
           sub={`${runs[0]?.name ?? "Smoke Suite"} · ${env}`}
           accent="success"
           Icon={Clock}
@@ -163,7 +173,6 @@ export function Dashboard() {
                   <th className="px-4 py-2 font-medium">Run Name</th>
                   <th className="px-3 py-2 font-medium">Status</th>
                   <th className="px-3 py-2 text-right font-medium">Correct%</th>
-                  <th className="px-3 py-2 text-right font-medium">p95</th>
                   <th className="px-3 py-2 font-medium">Triggered By</th>
                   <th className="px-4 py-2 text-right font-medium">Time</th>
                   <th className="w-8" />
@@ -181,7 +190,7 @@ export function Dashboard() {
                 {filteredRuns.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={6}
                       className="px-4 py-6 text-center text-muted"
                     >
                       No runs match “{search}”.
@@ -224,8 +233,8 @@ export function Dashboard() {
                       c.status === "running"
                         ? "Running…"
                         : c.status === "safe"
-                        ? "Safe"
-                        : "Blocked"
+                          ? "Safe"
+                          : "Blocked"
                     }
                   />
                 </div>
@@ -262,12 +271,11 @@ export function Dashboard() {
                   <tr
                     key={c.endpoint}
                     onClick={() =>
-                      c.detail &&
-                      setExpandedContract(open ? null : c.endpoint)
+                      c.detail && setExpandedContract(open ? null : c.endpoint)
                     }
                     className={cn(
                       "border-b border-border-muted last:border-0 align-top",
-                      c.detail && "cursor-pointer hover:bg-surface-2/60"
+                      c.detail && "cursor-pointer hover:bg-surface-2/60",
                     )}
                   >
                     <td className="px-4 py-2.5">
@@ -276,7 +284,7 @@ export function Dashboard() {
                           <ChevronRight
                             className={cn(
                               "h-3.5 w-3.5 text-muted transition-transform",
-                              open && "rotate-90"
+                              open && "rotate-90",
                             )}
                           />
                         ) : (
@@ -292,7 +300,7 @@ export function Dashboard() {
                             className={cn(
                               c.status === "breaking"
                                 ? "text-danger/90"
-                                : "text-warning/90"
+                                : "text-warning/90",
                             )}
                           >
                             {c.detail}
@@ -307,8 +315,8 @@ export function Dashboard() {
                           c.status === "clean"
                             ? "Clean"
                             : c.status === "drift"
-                            ? "Drift"
-                            : "Breaking"
+                              ? "Drift"
+                              : "Breaking"
                         }
                       />
                     </td>
@@ -404,8 +412,8 @@ function RunRow({
             run.status === "pass"
               ? "Pass"
               : run.status === "fail"
-              ? "Fail"
-              : "Running…"
+                ? "Fail"
+                : "Running…"
           }
         />
       </td>
@@ -420,7 +428,6 @@ function RunRow({
           <span className="text-text-primary">{run.correctPercent}%</span>
         )}
       </td>
-      <td className="px-3 py-2.5 text-right mono text-muted">{run.p95}</td>
       <td className="px-3 py-2.5">
         <span className="mono text-accent">{run.triggeredBy}</span>
       </td>
@@ -471,7 +478,7 @@ function StatCard({
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
             accentBg,
-            accentColor
+            accentColor,
           )}
         >
           <Icon className="h-4.5 w-4.5" />

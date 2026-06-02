@@ -5,7 +5,7 @@ export interface RecentRun {
   name: string;
   status: "pass" | "fail" | "running";
   correctPercent: number | null;
-  p95: string;
+  p95?: string;
   triggeredBy: string;
   time: string;
 }
